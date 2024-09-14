@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Simple Blog</title>
+  </head>
+  <body>
+    <h1>Welcome to my blog site!</h1>
+    <ul>
+      {{ range .Blogs }}
+      <li><a href="/blogs/{{ .Id }}">{{ .Title }}</a></li>
+      {{ end }}
+    </ul>
+  </body>
+</html>
