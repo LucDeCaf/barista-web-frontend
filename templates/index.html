@@ -1,16 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Simple Blog</title>
-  </head>
-  <body>
-    <h1>Welcome to my blog site!</h1>
-    <ul>
-      {{ range .Blogs }}
-      <li><a href="/blogs/{{ .Id }}">{{ .Title }}</a></li>
-      {{ end }}
-    </ul>
-  </body>
+    <head>
+        <!-- CSS -->
+        <link rel="stylesheet" href="static/css/index.css" />
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Kaushan+Script&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Laila:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+
+        <!-- Metadata -->
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Barista</title>
+    </head>
+
+    <body class="bg-light">
+        <nav class="h-24 bg-primary flex justify-between items-center px-12">
+            <h1 class="font-cursive text-5xl text-dark">Barista</h1>
+            <a
+                href="/login"
+                class="rounded-full w-16 aspect-square bg-light grid place-items-center"
+            >
+                <img
+                    src="/static/images/bean.png"
+                    class="w-14 aspect-square"
+                    alt="Coffee bean"
+                />
+            </a>
+        </nav>
+
+        <main class="p-20 grid grid-cols-2 gap-20">
+            <div class="flex flex-col gap-16 pt-24 pl-16">
+                <div class="flex flex-col gap-8">
+                    <h1 class="text-6xl font-medium leading-[4rem] font-sans">
+                        Brew your blog
+                        <br />with us
+                    </h1>
+                    <p class="text-3xl text-dark">
+                        The complete solution to blog
+                        <br />writing, hosting, and deployment
+                    </p>
+                </div>
+
+                <div class="flex gap-16 items-center text-2xl">
+                    <a
+                        href="/register"
+                        class="bg-primary text-dark rounded-full px-6 py-3"
+                        >Get Started</a
+                    >
+                    <a href="/blogs" class="text-dark bg-transparent underline"
+                        >Explore</a
+                    >
+                </div>
+            </div>
+
+            <div class="flex justify-center">
+                <img
+                    src="/static/images/coffee-cup.webp"
+                    alt="Steaming hot coffee cup clipart"
+                />
+            </div>
+        </main>
+    </body>
 </html>
