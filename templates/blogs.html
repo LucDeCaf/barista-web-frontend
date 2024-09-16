@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>All Blogs</title>
-  </head>
-  <body>
-    <h1>All Blogs</h1>
-    <ul>
-      {{ range .Blogs }}
-      <li><a href="/blogs/{{ .Id }}">{{ .Title }}</a></li>
-      {{ end }}
-    </ul>
-  </body>
+    <head>
+        {{template "head"}}
+        <title>All Blogs</title>
+    </head>
+    <body class="bg-light">
+        {{template "navbar"}}
+        <main class="p-16">
+            <h1 class="text-3xl">All Blogs</h1>
+            <br />
+            <div class="flex flex-col gap-8">
+                {{range .Blogs}}
+                <a href="/blogs/{.Id}">
+                    <h2 class="text-2xl">{{.Title}}</h2>
+                    <p class="text-xl text-dark line-clamp-1">{{.Content}}</p>
+                </a>
+                {{end}}
+            </div>
+        </main>
+    </body>
 </html>

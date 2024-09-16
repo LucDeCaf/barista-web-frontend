@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blog - {{ .Title }}</title>
-  </head>
-  <body>
-    <h1>{{ .Title }}</h1>
-    <div>{{ .Content }}</div>
-  </body>
+    <head>
+        {{template "head"}}
+        <title>{{.Title}}</title>
+    </head>
+    {{template "navbar"}}
+    <body class="bg-light">
+        <main class="p-16">
+            <h1 class="text-2xl">{{.Title}}</h1>
+            <div>{{.Content}}</div>
+        </main>
+    </body>
 </html>
