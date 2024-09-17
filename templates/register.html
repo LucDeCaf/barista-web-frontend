@@ -2,20 +2,20 @@
 <html lang="en">
     <head>
         {{template "head"}}
+        <script src="/js/register.js"></script>
         <title>Document</title>
     </head>
     <body class="bg-light">
         {{template "navbar"}}
         <main class="p-16 grid place-items-center">
             <form
-                action="post"
                 class="flex flex-col gap-8 w-full lg:rounded-lg bg-primary lg:w-[450px] p-16 text-xl"
             >
                 <h1 class="text-3xl font-medium text-center">
                     Sign up to Barista
                 </h1>
 
-                <label for="username" >
+                <label for="username">
                     Username
                     <input
                         class="rounded-md px-2 py-1 text-lg w-full"
@@ -42,7 +42,13 @@
                     />
                 </label>
 
-                <button type="submit" class="bg-light rounded-full w-full p-2 mt-2">
+                <button
+                    type="button"
+                    class="g-recaptcha bg-light rounded-full w-full p-2 mt-2"
+                    data-sitekey="6LcH9kYqAAAAAA13KUvAvKBJmcG9g9xpSsSMFaUz"
+                    data-callback="onSubmit"
+                    data-action="register"
+                >
                     Register
                 </button>
             </form>

@@ -7,6 +7,7 @@ build:
 	npx tailwindcss --minify -c tailwind.config.js -i css/index.css -o build/static/css/index.css
 	cp -R templates build/templates
 	cp -R images build/static/images
+	cp -R js build/js
 
 .PHONY: run
 run: build

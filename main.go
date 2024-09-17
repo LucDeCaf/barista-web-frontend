@@ -1,15 +1,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	recaptcha "cloud.google.com/go/recaptchaenterprise/v2/apiv1"
+	recaptchapb "cloud.google.com/go/recaptchaenterprise/v2/apiv1/recaptchaenterprisepb"
 )
+
+const RECAPTCHA_PROJECT_ID = "barista-1726578784920"
+const RECAPTCHA_KEY = "6LcH9kYqAAAAAA13KUvAvKBJmcG9g9xpSsSMFaUz"
 
 var templates *template.Template
 
@@ -23,15 +31,56 @@ type Blog struct {
 }
 
 type User struct {
-	Username     int    `json:"username"`
+	Username     string `json:"username"`
 	PasswordHash int    `json:"password_hash"`
 	Role         string `json:"role"`
 }
 
 type RegisterRequest struct {
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirmpassword"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Token    string `json:"token"`
+}
+
+func generateRiskAnalysis(projectID string, recaptchaKey string, token string, action string) (*recaptchapb.RiskAnalysis, error) {
+	ctx := context.Background()
+	client, err := recaptcha.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	event := &recaptchapb.Event{
+		Token:   token,
+		SiteKey: recaptchaKey,
+	}
+
+	assessment := &recaptchapb.Assessment{
+		Event: event,
+	}
+
+	request := &recaptchapb.CreateAssessmentRequest{
+		Assessment: assessment,
+		Parent:     fmt.Sprintf("projects/%s", projectID),
+	}
+
+	resp, err := client.CreateAssessment(
+		ctx,
+		request,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !resp.TokenProperties.Valid {
+		return nil, fmt.Errorf("invalid token: %v", token)
+	}
+
+	if resp.TokenProperties.Action != action {
+		return nil, fmt.Errorf("unexpected action %v, expected %v", resp.TokenProperties.Action, action)
+	}
+
+	return resp.RiskAnalysis, nil
 }
 
 func serverRequest(url string, action string, body io.Reader) (*http.Response, error) {
@@ -57,6 +106,9 @@ func main() {
 	port := *portPtr
 
 	templates = template.Must(template.ParseGlob("templates/*.html"))
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("js"))))
 
 	http.HandleFunc("/", page404)
 
@@ -129,20 +181,24 @@ func main() {
 	})
 
 	http.HandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
-			http.Redirect(w, r, "/register", http.StatusMovedPermanently)
-			return
-		}
-
-		if !(r.Form.Has("username") && r.Form.Has("password") && r.Form.Has("confirmpassword")) {
+		var rr RegisterRequest
+		if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
+			log.Println("err: " + err.Error())
 			http.Error(w, "bad request", 400)
 			return
 		}
 
-		rr := RegisterRequest{
-			Username:        r.FormValue("username"),
-			Password:        r.FormValue("password"),
-			ConfirmPassword: r.FormValue("confirmpassword"),
+		assessment, err := generateRiskAnalysis(RECAPTCHA_PROJECT_ID, RECAPTCHA_KEY, rr.Token, "register")
+		if err != nil {
+			log.Println("err: " + err.Error())
+			http.Error(w, "internal server error", 500)
+			return
+		}
+
+		if assessment.Score < 0.4 {
+			log.Printf("Potential bot found (score: %v)\n", assessment.Score)
+			http.Error(w, "disallowed", 402) // TODO: Find proper method
+			return
 		}
 
 		resp, err := serverRequest("http://localhost:8080/v1/users",
@@ -168,10 +224,18 @@ func main() {
 			return
 		}
 
-		// TODO: Make POST request to http://localhost:8080/v1/users with registration details
+		// TODO: Test this / finish this
+		resp, err = http.Post(
+			"http://localhost:8080/register",
+			"application/json",
+			strings.NewReader(fmt.Sprintf("{username:\"%v\",password:\"%v\"}", rr.Username, rr.Password)),
+		)
+		if err != nil {
+			log.Println("err: ", err.Error())
+			http.Error(w, "internal server error", 500)
+			return
+		}
 	})
-
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	log.Println("app listening on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
