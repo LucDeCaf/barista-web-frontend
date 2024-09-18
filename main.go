@@ -9,15 +9,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	recaptcha "cloud.google.com/go/recaptchaenterprise/v2/apiv1"
 	recaptchapb "cloud.google.com/go/recaptchaenterprise/v2/apiv1/recaptchaenterprisepb"
+	"github.com/joho/godotenv"
 )
-
-const RECAPTCHA_PROJECT_ID = "barista-1726578784920"
-const RECAPTCHA_KEY = "6LcH9kYqAAAAAA13KUvAvKBJmcG9g9xpSsSMFaUz"
 
 var templates *template.Template
 
@@ -97,6 +96,11 @@ func serverRequest(url string, action string, body io.Reader) (*http.Response, e
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("error loading .env file: " + err.Error())
+	}
+
 	portPtr := flag.String(
 		"port",
 		"8000",
@@ -181,60 +185,128 @@ func main() {
 	})
 
 	http.HandleFunc("POST /register", func(w http.ResponseWriter, r *http.Request) {
-		var rr RegisterRequest
-		if err := json.NewDecoder(r.Body).Decode(&rr); err != nil {
-			log.Println("err: " + err.Error())
-			http.Error(w, "bad request", 400)
+		if err := r.ParseForm(); err != nil {
+			log.Println("err parsing form data: ", err.Error())
+			http.Error(w, "internal server error", 500)
 			return
 		}
 
-		assessment, err := generateRiskAnalysis(RECAPTCHA_PROJECT_ID, RECAPTCHA_KEY, rr.Token, "register")
+		rr := RegisterRequest{
+			Username: r.FormValue("username"),
+			Password: r.FormValue("password"),
+			Token:    r.FormValue("g-recaptcha-response"),
+		}
+
+		// Check if request came from a bot using ReCAPTCHA
+		recaptchaProjectId := os.Getenv("RECAPTCHA_PROJECT_ID")
+		recaptchaKey := os.Getenv("RECAPTCHA_KEY")
+
+		assessment, err := generateRiskAnalysis(recaptchaProjectId, recaptchaKey, rr.Token, "register")
 		if err != nil {
-			log.Println("err: " + err.Error())
+			log.Println("err generating risk analysis: " + err.Error())
 			http.Error(w, "internal server error", 500)
 			return
 		}
 
 		if assessment.Score < 0.4 {
 			log.Printf("Potential bot found (score: %v)\n", assessment.Score)
-			http.Error(w, "disallowed", 402) // TODO: Find proper method
+			http.Error(w, "unauthorized", 401)
 			return
 		}
 
+		// Check if user already exists
 		resp, err := serverRequest("http://localhost:8080/v1/users",
 			"GetByUsername",
 			strings.NewReader(rr.Username),
 		)
 
 		if err != nil {
-			log.Println("err: " + err.Error())
+			log.Println("err getting user: " + err.Error())
 			http.Error(w, "internal server error", 500)
 			return
 		}
 
+		// Request body is not needed so close it right away
 		if resp.StatusCode <= 200 || resp.StatusCode > 299 {
-			// Request body is not needed, we are just checking
-			// if the user already exists
 			resp.Body.Close()
 		}
 
 		if resp.StatusCode != 404 {
-			log.Println("err: " + err.Error())
+			log.Println("err checking for user: " + err.Error())
 			http.Error(w, "user already exists", 400)
 			return
 		}
 
-		// TODO: Test this / finish this
+		// TODO: Escape rr.Username and rr.Password before use in fmt.Sprintf
+		// TODO: eg: "test123\321" -> "test123\\321" or "test123\"321" -> "test123\\"321"
+
+		// Create the user account
 		resp, err = http.Post(
 			"http://localhost:8080/register",
 			"application/json",
-			strings.NewReader(fmt.Sprintf("{username:\"%v\",password:\"%v\"}", rr.Username, rr.Password)),
+			strings.NewReader(fmt.Sprintf("{\"username\":\"%v\",\"password\":\"%v\"}", rr.Username, rr.Password)),
 		)
 		if err != nil {
-			log.Println("err: ", err.Error())
+			log.Println("err registering user w/ backend: ", err.Error())
 			http.Error(w, "internal server error", 500)
 			return
 		}
+		resp.Body.Close()
+
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			log.Println("err logging in user w/ backend:", resp.StatusCode)
+			http.Error(w, "internal server error", 500)
+			return
+		}
+
+		// TODO: Escape here too
+
+		// Login using the user\"s credentials
+		resp, err = http.Post(
+			"http://localhost:8080/login",
+			"application/json",
+			strings.NewReader(fmt.Sprintf("{\"username\":\"%v\",\"password\":\"%v\"}", rr.Username, rr.Password)),
+		)
+		if err != nil {
+			log.Println("err logging in user w/ backend: ", err.Error())
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		defer resp.Body.Close()
+
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Println("err reading body of backend login response: ", err.Error())
+			http.Error(w, "internal server error", 500)
+			return
+		}
+
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			log.Println("err logging in user w/ backend:", string(buf))
+			http.Error(w, "internal server error", 500)
+			return
+		}
+
+		// Extract user token and store as cookie
+		jwt := string(buf)
+		cookie := &http.Cookie{
+			Name:     "barista_auth_token",
+			Value:    strings.TrimSpace(jwt),
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   60 * 60 * 24,
+		}
+
+		log.Println("cookie:")
+
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost")
+
+		http.SetCookie(w, cookie)
+
+		// Send user to homepage
+		http.Redirect(w, r, "/", http.StatusFound)
 	})
 
 	log.Println("app listening on port " + port)

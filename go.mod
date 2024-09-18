@@ -2,7 +2,10 @@ module github.com/LucDeCaf/blog-frontend
 
 go 1.22.5
 
-require cloud.google.com/go/recaptchaenterprise/v2 v2.17.1
+require (
+	cloud.google.com/go/recaptchaenterprise/v2 v2.17.1
+	github.com/joho/godotenv v1.5.1
+)
 
 require (
 	cloud.google.com/go/auth v0.9.3 // indirect

@@ -1,25 +1,15 @@
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
-const confirmPasswordInput = document.getElementById('confirmpassword');
-
 function onSubmit(token) {
-    const username = usernameInput.value;
-    const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmpassword').value;
 
+    console.log('doing things');
+
+    console.log('doing things');
     if (password != confirmPassword) {
+        console.log('mismatching passwords');
         return;
     }
+    console.log('doing things');
 
-    fetch('http://localhost:8000/register', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            username: username,
-            password: password,
-            token: token,
-        }),
-    });
+    document.getElementById('register-form').submit();
 }

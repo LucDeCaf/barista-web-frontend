@@ -8,6 +8,7 @@ build:
 	cp -R templates build/templates
 	cp -R images build/static/images
 	cp -R js build/js
+	cp .env build/.env
 
 .PHONY: run
 run: build

@@ -9,6 +9,8 @@
         {{template "navbar"}}
         <main class="p-16 grid place-items-center">
             <form
+                id="register-form"
+                method="POST"
                 class="flex flex-col gap-8 w-full lg:rounded-lg bg-primary lg:w-[450px] p-16 text-xl"
             >
                 <h1 class="text-3xl font-medium text-center">
@@ -18,6 +20,7 @@
                 <label for="username">
                     Username
                     <input
+                        id="username"
                         class="rounded-md px-2 py-1 text-lg w-full"
                         type="text"
                         name="username"
@@ -27,6 +30,7 @@
                 <label for="password" class="w-full">
                     Password
                     <input
+                        id="password"
                         class="rounded-md px-2 py-1 text-lg w-full"
                         type="password"
                         name="password"
@@ -36,6 +40,7 @@
                 <label for="confirmpassword" class="w-full">
                     Confirm password
                     <input
+                        id="confirmpassword"
                         class="rounded-md px-2 py-1 text-lg w-full"
                         type="password"
                         name="confirmpassword"
@@ -43,7 +48,6 @@
                 </label>
 
                 <button
-                    type="button"
                     class="g-recaptcha bg-light rounded-full w-full p-2 mt-2"
                     data-sitekey="6LcH9kYqAAAAAA13KUvAvKBJmcG9g9xpSsSMFaUz"
                     data-callback="onSubmit"
