@@ -95,6 +95,13 @@ func serverRequest(url string, action string, body io.Reader) (*http.Response, e
 	return client.Do(req)
 }
 
+func sanitizeJSON(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "'", "\\'")
+	return s
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -192,9 +199,9 @@ func main() {
 		}
 
 		rr := RegisterRequest{
-			Username: r.FormValue("username"),
-			Password: r.FormValue("password"),
-			Token:    r.FormValue("g-recaptcha-response"),
+			Username: sanitizeJSON(r.FormValue("username")),
+			Password: sanitizeJSON(r.FormValue("password")),
+			Token:    sanitizeJSON(r.FormValue("g-recaptcha-response")),
 		}
 
 		// Check if request came from a bot using ReCAPTCHA
@@ -237,9 +244,6 @@ func main() {
 			return
 		}
 
-		// TODO: Escape rr.Username and rr.Password before use in fmt.Sprintf
-		// TODO: eg: "test123\321" -> "test123\\321" or "test123\"321" -> "test123\\"321"
-
 		// Create the user account
 		resp, err = http.Post(
 			"http://localhost:8080/register",
@@ -259,9 +263,7 @@ func main() {
 			return
 		}
 
-		// TODO: Escape here too
-
-		// Login using the user\"s credentials
+		// Login using the user's credentials
 		resp, err = http.Post(
 			"http://localhost:8080/login",
 			"application/json",
