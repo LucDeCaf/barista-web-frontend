@@ -2,6 +2,8 @@
 
 A website frontend for the Barista blogging platform.
 
+_Note: This project requires [barista-backend](https://github.com/LucDeCaf/barista-backend) to be running on port 8080 to function properly._
+
 ## Usage
 
 1. Install dependencies
